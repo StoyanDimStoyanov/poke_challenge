@@ -1,5 +1,6 @@
 import logging
-
+import requests
+import json
 
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
 
@@ -15,7 +16,25 @@ class PokeEtl:
     def extract(self):
         "get the pokemon data from the source api"
         logging.info('extract')
-        pass
+        try:
+            response = requests.get(self.pokemon_api_url)
+            if response.status_code != 200:
+                raise Exception("")
+            data = response.json()
+            pokemons_list = data['pokemon'][:50]
+            for pokemon in pokemons_list:
+                pokemon_url = pokemon['pokemon']['url']
+                pokemon_data = requests.get(pokemon_url).json()
+                details = {
+                    'id': pokemon_data['id'],
+                    'name': pokemon_data['name'],
+                    'height': pokemon_data['height'],
+                    'weight': pokemon_data['weight']
+                }
+                self.extracted_data.append(details)
+        except Exception as e:
+            logging.info("Error occurred during data extraction:", e)
+
 
     def transform(self):
         logging.info('transform')
