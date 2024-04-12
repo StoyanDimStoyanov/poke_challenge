@@ -1,8 +1,11 @@
 import logging
 import requests
 import json
+import apache_beam as beam
 
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
+
+
 
 
 class PokeEtl:
@@ -32,13 +35,34 @@ class PokeEtl:
                     'weight': pokemon_data['weight']
                 }
                 self.extracted_data.append(details)
+                print(details)
+
         except Exception as e:
             logging.info("Error occurred during data extraction:", e)
 
 
     def transform(self):
-        logging.info('transform')
-        pass
+        """
+        Transform the extracted data using Apache Beam
+        """
+
+        def calculate_bmi(obj):
+            obj["bmi"] = round(obj["weight"] / (obj["height"] ** 2), 2)
+            return obj
+
+        def transform_weight_height(obj):
+            obj["weight"] /= 1000
+            obj["height"] /= 100
+            return obj
+
+        with beam.Pipeline() as pipeline:
+            transformed_data = (
+                pipeline
+                | beam.Create(self.extracted_data)
+                | beam.Map(transform_weight_height)
+                | beam.Map(calculate_bmi)
+                | beam.Map(print)
+            )
 
     def load(self):
         logging.info('load')
